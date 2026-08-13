@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase-server';
 
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY!;
-const vapidEmail = process.env.VAPID_EMAIL || 'mailto:support@hark.com';
+const vapidEmail = process.env.VAPID_EMAIL || 'mailto:support@kraken.com';
 
 if (vapidPublicKey && vapidPrivateKey) {
   webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);

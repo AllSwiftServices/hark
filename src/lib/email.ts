@@ -54,7 +54,7 @@ export function parseMarkdownToHtml(markdown: string): string {
   html = html.replace(/^---$/gm, '<hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />');
 
   // Links ([text](url))
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color: #f97316; text-decoration: underline; font-weight: 600;">$1</a>');
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color: #7c3aed; text-decoration: underline; font-weight: 600;">$1</a>');
 
   // Bullet list items (starting with * or - or +)
   html = html.replace(/^\s*[-*+]\s+(.*?)$/gm, '<li style="margin-bottom: 6px; color: #4b5563; font-family: Arial, sans-serif; font-size: 15px;">$1</li>');
@@ -84,7 +84,7 @@ export function parseMarkdownToHtml(markdown: string): string {
  */
 export function generateBloFinStyleEmailHtml(title: string, contentHtml: string, name?: string): string {
   const greeting = name ? `Hi ${name},` : "Hello,";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://hark.com";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://kraken.com";
   const leftLogoUrl = `${appUrl}/logo-left.png`;
   const rightLogoUrl = `${appUrl}/logo-right.png`;
   
@@ -101,9 +101,9 @@ export function generateBloFinStyleEmailHtml(title: string, contentHtml: string,
           <tr>
             <td align="center">
               <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border: 1px solid #e5e7eb;">
-                <!-- HEADER (BloFin style black bar with Hark Branding) -->
+                <!-- HEADER (Kraken styled dark header with brand logos) -->
                 <tr>
-                  <td style="background-color: #000000; padding: 20px 30px; border-bottom: 4px solid #f97316;">
+                  <td style="background-color: #0f0c1b; padding: 22px 30px; border-bottom: 4px solid #7047EB;">
                     <table border="0" cellpadding="0" cellspacing="0" width="100%">
                       <tr>
                         <td align="left" valign="middle" style="font-size: 0; line-height: 0;">
@@ -150,7 +150,7 @@ export function generateBloFinStyleEmailHtml(title: string, contentHtml: string,
                     
                     <!-- Support Link -->
                     <p style="margin: 0 0 20px; font-size: 12px; text-align: center; font-family: Arial, sans-serif;">
-                      <a href="mailto:support@hark.com" style="color: #f97316; text-decoration: none; font-weight: bold;">support@hark.com</a>
+                      <a href="mailto:support@kraken.com" style="color: #7047EB; text-decoration: none; font-weight: bold;">support@kraken.com</a>
                     </p>
                   </td>
                 </tr>
@@ -190,20 +190,20 @@ export async function sendOtpEmail(to: string, otp: string, type: 'login' | 'sig
   console.log(`🚀 Attempting to send ${type} OTP email via SMTP to: ${to}`);
 
   const subjects = {
-    login: "Verify Your Email - Hark",
-    signup: "Welcome to Hark - Verify Your Email",
-    reset: "Reset Your Password - Hark",
+    login: "Verify Your Email - Kraken",
+    signup: "Welcome to Kraken - Verify Your Email",
+    reset: "Reset Your Password - Kraken",
   };
 
   const titles = {
     login: "Verify Your Email",
-    signup: "Welcome to Hark!",
+    signup: "Welcome to Kraken!",
     reset: "Reset Your Password",
   };
 
   const messages = {
     login: "Welcome back! Please use the verification code below to complete your sign in.",
-    signup: "Welcome to Hark! Please use the verification code below to complete your registration.",
+    signup: "Welcome to Kraken! Please use the verification code below to complete your registration.",
     reset: "You've requested to reset your password. Please use the verification code below to proceed.",
   };
 
@@ -214,9 +214,9 @@ export async function sendOtpEmail(to: string, otp: string, type: 'login' | 'sig
     <p style="margin: 0 0 16px; color: #4b5563; font-size: 15px; font-family: Arial, sans-serif; line-height: 1.6;">
       ${messages[type]}
     </p>
-    <div style="background-color: #f9fafb; border-radius: 8px; padding: 24px; margin: 24px 0; border: 1px solid #e5e7eb; text-align: center;">
-      <p style="margin: 0 0 8px; color: #9ca3af; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; font-family: Arial, sans-serif;">Verification Code</p>
-      <div style="font-size: 38px; font-weight: bold; color: #f97316; letter-spacing: 6px; margin: 10px 0; font-family: Courier, monospace;">
+    <div style="background-color: #f5f3ff; border-radius: 8px; padding: 24px; margin: 24px 0; border: 1px solid #e9d5ff; text-align: center;">
+      <p style="margin: 0 0 8px; color: #7047EB; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; font-family: Arial, sans-serif;">Verification Code</p>
+      <div style="font-size: 38px; font-weight: bold; color: #7047EB; letter-spacing: 6px; margin: 10px 0; font-family: Courier, monospace;">
         ${otp}
       </div>
       <p style="margin: 8px 0 0; color: #6b7280; font-size: 13px; font-family: Arial, sans-serif;">The verification code is valid for 10 minutes. Do not share the code with anyone.</p>
@@ -248,31 +248,31 @@ export async function sendWelcomeEmail(to: string, name: string) {
 
   const contentHtml = `
     <p style="margin: 0 0 16px; color: #4b5563; font-size: 15px; font-family: Arial, sans-serif; line-height: 1.6;">
-      Thank you for joining Hark! You're now part of our community of elite traders.
+      Thank you for joining Kraken! You're now part of our community of elite traders.
     </p>
     
-    <div style="margin: 20px 0; padding-left: 14px; border-left: 3px solid #f97316;">
+    <div style="margin: 20px 0; padding-left: 14px; border-left: 3px solid #7047EB;">
       <p style="margin: 0 0 8px; color: #4b5563; font-size: 14px; font-family: Arial, sans-serif;">✓ Advanced trading tools & real-time analytics</p>
       <p style="margin: 0 0 8px; color: #4b5563; font-size: 14px; font-family: Arial, sans-serif;">✓ Access global markets effortlessly</p>
       <p style="margin: 0 0 8px; color: #4b5563; font-size: 14px; font-family: Arial, sans-serif;">✓ Secure platform and funds protection</p>
     </div>
 
     <div style="margin: 30px 0 20px; text-align: center;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://hark.com"}/dashboard" 
-         style="display: inline-block; background-color: #f97316; color: #ffffff; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 15px; font-family: Arial, sans-serif;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://kraken.com"}/dashboard" 
+         style="display: inline-block; background-color: #7047EB; color: #ffffff; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 15px; font-family: Arial, sans-serif;">
         Go to Dashboard
       </a>
     </div>
   `;
 
-  const html = generateBloFinStyleEmailHtml("Welcome to Hark!", contentHtml, name);
+  const html = generateBloFinStyleEmailHtml("Welcome to Kraken!", contentHtml, name);
 
   try {
     const mailer = getTransporter();
     const info = await mailer.sendMail({
       from: process.env.SMTP_USER,
       to,
-      subject: "Welcome to Hark! 🎉",
+      subject: "Welcome to Kraken! 🎉",
       html,
     });
 
@@ -292,7 +292,7 @@ export async function sendKycEmail(to: string, name: string, status: "approved" 
   const statusColor = isApproved ? "#22c55e" : "#ef4444";
   
   const message = isApproved
-    ? "Great news! Your identity verification has been approved. You now have full access to all Hark features, including withdrawals and advanced trading."
+    ? "Great news! Your identity verification has been approved. You now have full access to all Kraken features, including withdrawals and advanced trading."
     : `Your KYC application was unfortunately rejected. Reason: ${reason || "Please ensure your documents are clear and valid."}`;
 
   const contentHtml = `
@@ -307,8 +307,8 @@ export async function sendKycEmail(to: string, name: string, status: "approved" 
     </p>
     
     <div style="margin: 30px 0 20px; text-align: center;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://hark.com"}/verify-identity" 
-         style="display: inline-block; background-color: #f97316; color: #ffffff; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 15px; font-family: Arial, sans-serif;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || "https://kraken.com"}/verify-identity" 
+         style="display: inline-block; background-color: #7047EB; color: #ffffff; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 15px; font-family: Arial, sans-serif;">
         View Verification Status
       </a>
     </div>
@@ -321,7 +321,7 @@ export async function sendKycEmail(to: string, name: string, status: "approved" 
     const info = await mailer.sendMail({
       from: process.env.SMTP_USER,
       to,
-      subject: `${title} - Hark`,
+      subject: `${title} - Kraken`,
       html,
     });
 

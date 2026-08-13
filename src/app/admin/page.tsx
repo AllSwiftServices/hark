@@ -1787,7 +1787,7 @@ export default function AdminDashboard() {
                                   {/* BloFin layout simulation */}
                                   <div className="w-full max-w-[500px] bg-white text-gray-800 rounded-lg shadow-sm border border-gray-200 overflow-hidden text-left" style={{ fontFamily: 'Arial, sans-serif' }}>
                                      {/* Header */}
-                                     <div className="bg-black p-4 flex justify-between items-center" style={{ borderBottom: '3px solid #f97316' }}>
+                                     <div className="p-4 flex justify-between items-center" style={{ backgroundColor: '#0f0c1b', borderBottom: '3px solid #7047EB' }}>
                                         <div className="flex items-center">
                                            <img src="/logo-left.png" alt="Kraken" style={{ height: '34px', objectFit: 'contain' }} />
                                         </div>
@@ -1821,7 +1821,7 @@ export default function AdminDashboard() {
                                            Kraken strives to safeguard your account and transactions to protect you from scams. Thank you for choosing Kraken.
                                         </p>
                                         <p className="text-xs text-center font-bold">
-                                           <span style={{ color: '#f97316' }}>support@hark.com</span>
+                                           <span style={{ color: '#7047EB' }}>support@kraken.com</span>
                                         </p>
                                      </div>
                                   </div>
