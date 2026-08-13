@@ -208,12 +208,11 @@ alter table public.push_subscriptions enable row level security;
 -- =========================================================================
 create table if not exists public.verification_codes (
   id uuid primary key default uuid_generate_v4(),
-  email text not null,
+  email text not null unique,
   code text not null,
   expires_at timestamptz not null,
   created_at timestamptz default now()
 );
-create index if not exists idx_verification_codes_email on public.verification_codes(email);
 alter table public.verification_codes enable row level security;
 
 -- =========================================================================
@@ -264,8 +263,10 @@ create unique index if not exists idx_ai_trades_one_pending
   on public.ai_trades(user_id) where status = 'pending';
 
 alter table public.ai_trades enable row level security;
+drop policy if exists "Users view own ai trades" on public.ai_trades;
 create policy "Users view own ai trades" on public.ai_trades
   for select using (auth.uid() = user_id);
+drop policy if exists "Admins full ai trades access" on public.ai_trades;
 create policy "Admins full ai trades access" on public.ai_trades
   for all using (
     exists (select 1 from public.users where id = auth.uid() and role = 'admin')
@@ -295,8 +296,10 @@ create table if not exists public.managed_trades (
   created_at timestamptz default now()
 );
 alter table public.managed_trades enable row level security;
+drop policy if exists "Users view relevant trades" on public.managed_trades;
 create policy "Users view relevant trades" on public.managed_trades
   for select using (true);
+drop policy if exists "Admins full access to managed_trades" on public.managed_trades;
 create policy "Admins full access to managed_trades" on public.managed_trades
   for all using (
     exists (select 1 from public.users where id = auth.uid() and role = 'admin')
@@ -318,8 +321,10 @@ create table if not exists public.managed_trade_stakes (
   unique(trade_id, user_id)
 );
 alter table public.managed_trade_stakes enable row level security;
+drop policy if exists "Users view own stakes" on public.managed_trade_stakes;
 create policy "Users view own stakes" on public.managed_trade_stakes
   for select using (auth.uid() = user_id);
+drop policy if exists "Admins full access to managed_trade_stakes" on public.managed_trade_stakes;
 create policy "Admins full access to managed_trade_stakes" on public.managed_trade_stakes
   for all using (
     exists (select 1 from public.users where id = auth.uid() and role = 'admin')
@@ -361,20 +366,24 @@ alter table public.support_conversations enable row level security;
 alter table public.support_messages enable row level security;
 alter table public.help_articles enable row level security;
 
+drop policy if exists "Users can view own conversations" on public.support_conversations;
 create policy "Users can view own conversations"
   on public.support_conversations for select
   using (user_id = auth.uid() or exists (
     select 1 from public.users where id = auth.uid() and role = 'admin'
   ));
 
+drop policy if exists "Users can insert own conversations" on public.support_conversations;
 create policy "Users can insert own conversations"
   on public.support_conversations for insert
   with check (user_id = auth.uid());
 
+drop policy if exists "Admins can update conversations" on public.support_conversations;
 create policy "Admins can update conversations"
   on public.support_conversations for update
   using (exists (select 1 from public.users where id = auth.uid() and role = 'admin') or user_id = auth.uid());
 
+drop policy if exists "Users can view messages in own conversations" on public.support_messages;
 create policy "Users can view messages in own conversations"
   on public.support_messages for select
   using (
@@ -387,15 +396,18 @@ create policy "Users can view messages in own conversations"
     )
   );
 
+drop policy if exists "Users/admins can send messages" on public.support_messages;
 create policy "Users/admins can send messages"
   on public.support_messages for insert
   with check (sender_id = auth.uid());
 
+drop policy if exists "Authenticated users can read help articles" on public.help_articles;
 create policy "Authenticated users can read help articles"
   on public.help_articles for select
   to authenticated
   using (is_published = true);
 
+drop policy if exists "Admins can manage help articles" on public.help_articles;
 create policy "Admins can manage help articles"
   on public.help_articles for all
   using (exists (select 1 from public.users where id = auth.uid() and role = 'admin'));
@@ -429,12 +441,15 @@ create table if not exists public.notifications (
   created_at timestamptz default now()
 );
 alter table public.notifications enable row level security;
+drop policy if exists "Users can view their own notifications" on public.notifications;
 create policy "Users can view their own notifications"
   on public.notifications for select
   using (auth.uid() = user_id);
+drop policy if exists "Users can update their own notifications" on public.notifications;
 create policy "Users can update their own notifications"
   on public.notifications for update
   using (auth.uid() = user_id);
+drop policy if exists "Admins can manage all notifications" on public.notifications;
 create policy "Admins can manage all notifications"
   on public.notifications for all
   using (
