@@ -32,7 +32,7 @@ export default function Markets() {
     },
   });
 
-  const { data: wallets } = useQuery({
+  const { data: wallets, refetch: refetchWallets } = useQuery({
     queryKey: ['markets-wallets'],
     queryFn: async () => {
       const { data, error } = await api.get<any[]>('/wallets');
@@ -110,6 +110,7 @@ export default function Markets() {
         toast.success(`Sold ${trade.quantity.toFixed(6)} ${trade.asset.symbol}!`, { id: toastId });
       }
       refetchPortfolio();
+      refetchWallets();
     } catch (err: any) {
       toast.error(err.message || 'Trade failed', { id: toastId });
     }

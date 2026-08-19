@@ -95,7 +95,7 @@ export default function PortfolioPage() {
     refetchOnWindowFocus: true,
   });
 
-  const { data: wallets } = useQuery({
+  const { data: wallets, refetch: refetchWallets } = useQuery({
     queryKey: ['wallets'],
     queryFn: async () => {
       const { data, error } = await api.get<any[]>('/wallets');
@@ -185,6 +185,7 @@ export default function PortfolioPage() {
         toast.success(`Sold ${trade.quantity.toFixed(6)} ${trade.asset.symbol}!`, { id: toastId });
       }
       refetchPortfolio();
+      refetchWallets();
     } catch (err: any) {
       toast.error(err.message || 'Trade failed', { id: toastId });
     }

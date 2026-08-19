@@ -9,10 +9,19 @@
 -- Foreign keys on those tables are INFERRED from naming convention (e.g. user_id -> users.id)
 -- and cross-checked against app code usage, not copied from a real constraint — verify
 -- against the avent-ridge database if exact referential behavior matters.
--- RLS is enabled with no policies on those tables (default-deny for anon/authenticated).
--- This matches how the app actually works today: all DB access goes through server-side
--- API routes using the service-role key (which bypasses RLS), not direct client queries —
--- confirmed by grepping avent-ridge's client components for direct table access (none found).
+--
+-- RLS policies below were derived from actually tracing every `.from(table)` call in
+-- avent-ridge's API routes to see whether it used the session (RLS-bound) client or the
+-- service-role client (which bypasses RLS) — an earlier version of this file wrongly
+-- assumed "no migration file" meant "service-role only", which broke KYC submission,
+-- wallet reads, deposits, transactions, and admin role checks throughout the app.
+--
+-- All admin-check policies use public.is_admin(), a security definer function, rather
+-- than an inline `exists (select ... from public.users where role = 'admin')`. The
+-- inline form causes "infinite recursion detected in policy for relation users" once
+-- public.users itself has an admin policy, because evaluating that policy requires
+-- re-querying public.users, which re-triggers the same policy. security definer bypasses
+-- RLS for the function's internal query, breaking the cycle.
 
 create extension if not exists "uuid-ossp";
 create extension if not exists pgcrypto;
@@ -34,6 +43,33 @@ create table if not exists public.users (
   updated_at timestamptz default now()
 );
 alter table public.users enable row level security;
+drop policy if exists "Users view own profile" on public.users;
+create policy "Users view own profile" on public.users
+  for select using (auth.uid() = id);
+drop policy if exists "Users update own profile" on public.users;
+create policy "Users update own profile" on public.users
+  for update using (auth.uid() = id) with check (auth.uid() = id);
+
+-- security definer: bypasses RLS internally, breaking the recursion that
+-- would otherwise occur when a policy on public.users checks admin status
+-- by querying public.users itself.
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.users where id = auth.uid() and role = 'admin'
+  );
+$$;
+
+drop policy if exists "Admins full access to users" on public.users;
+create policy "Admins full access to users" on public.users
+  for all using (
+    public.is_admin()
+  );
 
 -- =========================================================================
 -- wallets
@@ -49,6 +85,14 @@ create table if not exists public.wallets (
 );
 create index if not exists idx_wallets_user on public.wallets(user_id);
 alter table public.wallets enable row level security;
+drop policy if exists "Users manage own wallets" on public.wallets;
+create policy "Users manage own wallets" on public.wallets
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "Admins full access to wallets" on public.wallets;
+create policy "Admins full access to wallets" on public.wallets
+  for all using (
+    public.is_admin()
+  );
 
 -- =========================================================================
 -- assets
@@ -64,6 +108,11 @@ create table if not exists public.assets (
   updated_at timestamptz default now()
 );
 alter table public.assets enable row level security;
+drop policy if exists "Admins full access to assets" on public.assets;
+create policy "Admins full access to assets" on public.assets
+  for all using (
+    public.is_admin()
+  );
 
 -- =========================================================================
 -- deposits
@@ -85,6 +134,14 @@ create table if not exists public.deposits (
 );
 create index if not exists idx_deposits_user on public.deposits(user_id);
 alter table public.deposits enable row level security;
+drop policy if exists "Users manage own deposits" on public.deposits;
+create policy "Users manage own deposits" on public.deposits
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "Admins full access to deposits" on public.deposits;
+create policy "Admins full access to deposits" on public.deposits
+  for all using (
+    public.is_admin()
+  );
 
 -- =========================================================================
 -- withdrawals
@@ -123,6 +180,14 @@ create table if not exists public.transactions (
 );
 create index if not exists idx_transactions_user on public.transactions(user_id);
 alter table public.transactions enable row level security;
+drop policy if exists "Users manage own transactions" on public.transactions;
+create policy "Users manage own transactions" on public.transactions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "Admins full access to transactions" on public.transactions;
+create policy "Admins full access to transactions" on public.transactions
+  for all using (
+    public.is_admin()
+  );
 
 -- =========================================================================
 -- portfolio
@@ -164,7 +229,7 @@ alter table public.holdings enable row level security;
 -- =========================================================================
 create table if not exists public.kyc (
   id uuid primary key default uuid_generate_v4(),
-  user_id uuid not null references public.users(id) on delete cascade,
+  user_id uuid not null unique references public.users(id) on delete cascade,
   user_email text not null,
   first_name text not null,
   last_name text not null,
@@ -187,6 +252,14 @@ create table if not exists public.kyc (
 );
 create index if not exists idx_kyc_user on public.kyc(user_id);
 alter table public.kyc enable row level security;
+drop policy if exists "Users manage own kyc" on public.kyc;
+create policy "Users manage own kyc" on public.kyc
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "Admins full access to kyc" on public.kyc;
+create policy "Admins full access to kyc" on public.kyc
+  for all using (
+    public.is_admin()
+  );
 
 -- =========================================================================
 -- push_subscriptions
@@ -194,7 +267,7 @@ alter table public.kyc enable row level security;
 create table if not exists public.push_subscriptions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users(id) on delete cascade,
-  endpoint text not null,
+  endpoint text not null unique,
   p256dh_key text not null,
   auth_key text not null,
   created_at timestamptz default now(),
@@ -225,6 +298,22 @@ create table if not exists public.settings (
   updated_at timestamptz default now()
 );
 alter table public.settings enable row level security;
+drop policy if exists "Authenticated users can read settings" on public.settings;
+create policy "Authenticated users can read settings" on public.settings
+  for select to authenticated using (true);
+
+-- Seed with empty placeholder addresses (NOT avent-ridge's real wallets — those
+-- are a different business's receiving addresses) so the admin "Deposit Wallet
+-- Addresses" editor has rows to populate. Fill in real addresses via the admin
+-- Settings tab before enabling deposits for real users.
+insert into public.settings (key, description, value) values (
+  'deposit_methods',
+  'Crypto wallet addresses shown to users on the deposit page',
+  '[
+    {"id":"btc","name":"Bitcoin","symbol":"BTC","address":"","qrCode":"","network":"Bitcoin"},
+    {"id":"usdt","name":"USDT (Tron)","symbol":"USDT","address":"","qrCode":"","network":"TRC-20"}
+  ]'::jsonb
+) on conflict (key) do nothing;
 
 -- =========================================================================
 -- site_settings (from supabase/migrations/site_settings.sql)
@@ -269,7 +358,7 @@ create policy "Users view own ai trades" on public.ai_trades
 drop policy if exists "Admins full ai trades access" on public.ai_trades;
 create policy "Admins full ai trades access" on public.ai_trades
   for all using (
-    exists (select 1 from public.users where id = auth.uid() and role = 'admin')
+    public.is_admin()
   );
 
 -- =========================================================================
@@ -302,7 +391,7 @@ create policy "Users view relevant trades" on public.managed_trades
 drop policy if exists "Admins full access to managed_trades" on public.managed_trades;
 create policy "Admins full access to managed_trades" on public.managed_trades
   for all using (
-    exists (select 1 from public.users where id = auth.uid() and role = 'admin')
+    public.is_admin()
   );
 
 create table if not exists public.managed_trade_stakes (
@@ -327,7 +416,7 @@ create policy "Users view own stakes" on public.managed_trade_stakes
 drop policy if exists "Admins full access to managed_trade_stakes" on public.managed_trade_stakes;
 create policy "Admins full access to managed_trade_stakes" on public.managed_trade_stakes
   for all using (
-    exists (select 1 from public.users where id = auth.uid() and role = 'admin')
+    public.is_admin()
   );
 
 -- =========================================================================
@@ -369,9 +458,7 @@ alter table public.help_articles enable row level security;
 drop policy if exists "Users can view own conversations" on public.support_conversations;
 create policy "Users can view own conversations"
   on public.support_conversations for select
-  using (user_id = auth.uid() or exists (
-    select 1 from public.users where id = auth.uid() and role = 'admin'
-  ));
+  using (user_id = auth.uid() or public.is_admin());
 
 drop policy if exists "Users can insert own conversations" on public.support_conversations;
 create policy "Users can insert own conversations"
@@ -381,7 +468,7 @@ create policy "Users can insert own conversations"
 drop policy if exists "Admins can update conversations" on public.support_conversations;
 create policy "Admins can update conversations"
   on public.support_conversations for update
-  using (exists (select 1 from public.users where id = auth.uid() and role = 'admin') or user_id = auth.uid());
+  using (public.is_admin() or user_id = auth.uid());
 
 drop policy if exists "Users can view messages in own conversations" on public.support_messages;
 create policy "Users can view messages in own conversations"
@@ -390,9 +477,7 @@ create policy "Users can view messages in own conversations"
     exists (
       select 1 from public.support_conversations
       where id = conversation_id
-      and (user_id = auth.uid() or exists (
-        select 1 from public.users where id = auth.uid() and role = 'admin'
-      ))
+      and (user_id = auth.uid() or public.is_admin())
     )
   );
 
@@ -410,7 +495,7 @@ create policy "Authenticated users can read help articles"
 drop policy if exists "Admins can manage help articles" on public.help_articles;
 create policy "Admins can manage help articles"
   on public.help_articles for all
-  using (exists (select 1 from public.users where id = auth.uid() and role = 'admin'));
+  using (public.is_admin());
 
 insert into public.help_articles (category, title, body, sort_order) values
   ('getting-started', 'How do I create an account?', 'To create an account, visit our sign-up page and enter your full name, email address, and a secure password. You will receive a verification code by email to confirm your identity.', 1),
@@ -453,10 +538,7 @@ drop policy if exists "Admins can manage all notifications" on public.notificati
 create policy "Admins can manage all notifications"
   on public.notifications for all
   using (
-    exists (
-      select 1 from public.users
-      where id = auth.uid() and role = 'admin'
-    )
+    public.is_admin()
   );
 
 -- =========================================================================
