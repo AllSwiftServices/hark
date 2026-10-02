@@ -10,6 +10,8 @@ export interface User {
   role?: string;
   email_verified?: boolean;
   kyc_status?: 'not_started' | 'pending' | 'approved' | 'rejected';
+  connected_app_email?: string;
+  connected_app_at?: string;
   user_metadata?: any;
 }
 

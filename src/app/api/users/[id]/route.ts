@@ -77,7 +77,7 @@ export async function PATCH(
       delete body.role;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("users")
       .update({
         ...body,

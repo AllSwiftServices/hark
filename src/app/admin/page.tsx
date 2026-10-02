@@ -9,7 +9,7 @@ import {
   TrendingUp, Settings, ChevronRight, Save,
   RefreshCcw, Filter, ArrowUpRight, ArrowDownRight,
   UserPlus, Mail, Phone, Calendar, MapPin,
-  Zap, Bot, TrendingDown, BarChart3, MessageCircle, Send, X, Trash2
+  Zap, Bot, TrendingDown, BarChart3, MessageCircle, Send, X, Trash2, Smartphone
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/AuthContext';
@@ -31,6 +31,8 @@ interface UserData {
   status: string;
   kyc_status: string;
   created_at: string;
+  connected_app_email?: string | null;
+  connected_app_at?: string | null;
 }
 
 interface Deposit {
@@ -349,7 +351,7 @@ export default function AdminDashboard() {
   const [userTab, setUserTab] = useState<'overview'|'balances'|'holdings'|'edit'>('overview');
   const [userDetail, setUserDetail] = useState<any>(null);
   const [userDetailLoading, setUserDetailLoading] = useState(false);
-  const [editForm, setEditForm] = useState<{ name: string; role: string; status: string }>({ name: '', role: '', status: '' });
+  const [editForm, setEditForm] = useState<{ name: string; role: string; status: string; connected_app_email?: string }>({ name: '', role: '', status: '', connected_app_email: '' });
   const [holdingAdjust, setHoldingAdjust] = useState<Record<string, { amount: string; loading: boolean }>>({});
   const [aiTradeSettings, setAiTradeSettings] = useState<{ mode: string; stats: any } | null>(null);
   const [aiModeLoading, setAiModeLoading] = useState(false);
@@ -425,7 +427,7 @@ export default function AdminDashboard() {
   const openUserDetail = async (u: UserData) => {
     setSelectedUser(u);
     setUserTab('overview');
-    setEditForm({ name: u.name || '', role: u.role || 'buyer', status: u.status || 'active' });
+    setEditForm({ name: u.name || '', role: u.role || 'buyer', status: u.status || 'active', connected_app_email: u.connected_app_email || '' });
     setUserDetailLoading(true);
     setUserDetail(null);
     setHoldingAdjust({});
@@ -928,12 +930,16 @@ export default function AdminDashboard() {
                   <motion.div key="users" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                       {/* Mobile Card View */}
                       <div className="grid grid-cols-1 gap-4 md:hidden">
-                          {users.filter(u => u.email.includes(searchQuery) || u.name?.includes(searchQuery)).map(u => (
+                          {users.filter(u => 
+                              u.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              u.connected_app_email?.toLowerCase().includes(searchQuery.toLowerCase())
+                          ).map(u => (
                               <div key={u.id} onClick={() => openUserDetail(u)} className="bg-card border border-border p-4 rounded-3xl flex items-center justify-between group active:scale-[0.98] transition-all">
                                   <div className="flex flex-col gap-1">
                                       <span className="text-sm font-bold">{u.name || 'Anonymous'}</span>
                                       <span className="text-[10px] text-muted-foreground font-mono">{u.email}</span>
-                                      <div className="flex gap-2 mt-1">
+                                      <div className="flex flex-wrap gap-2 mt-1">
                                           <span className={cn(
                                               "px-2 py-0.5 rounded-full text-[8px] font-bold uppercase",
                                               u.role === 'admin' ? 'bg-purple-500/10 text-purple-500' : 'bg-blue-500/10 text-blue-500'
@@ -942,6 +948,12 @@ export default function AdminDashboard() {
                                               "px-2 py-0.5 rounded-full text-[8px] font-bold uppercase",
                                               u.kyc_status === 'approved' ? 'bg-success/10 text-success' : 'bg-amber-500/10 text-amber-500'
                                           )}>{u.kyc_status}</span>
+                                          {u.connected_app_email && (
+                                              <span className="px-2 py-0.5 rounded-full text-[8px] font-bold bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
+                                                  <Smartphone className="h-2.5 w-2.5" />
+                                                  {u.connected_app_email}
+                                              </span>
+                                          )}
                                       </div>
                                   </div>
                                   <div className="flex items-center gap-2">
@@ -965,12 +977,17 @@ export default function AdminDashboard() {
                                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">User</th>
                                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Role</th>
                                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">KYC Status</th>
+                                      <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Connected App</th>
                                       <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Joined</th>
                                       <th className="px-6 py-4 text-right"></th>
                                   </tr>
                               </thead>
                               <tbody className="divide-y divide-border">
-                                  {users.filter(u => u.email.includes(searchQuery) || u.name?.includes(searchQuery)).map(u => (
+                                  {users.filter(u => 
+                                      u.email.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                      u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                      u.connected_app_email?.toLowerCase().includes(searchQuery.toLowerCase())
+                                  ).map(u => (
                                       <tr key={u.id} className="hover:bg-muted/10 transition-colors group">
                                           <td className="px-6 py-4">
                                               <div className="flex flex-col">
@@ -989,6 +1006,16 @@ export default function AdminDashboard() {
                                                   "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
                                                   u.kyc_status === 'approved' ? 'bg-success/10 text-success' : 'bg-amber-500/10 text-amber-500'
                                               )}>{u.kyc_status}</span>
+                                          </td>
+                                          <td className="px-6 py-4">
+                                              {u.connected_app_email ? (
+                                                  <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
+                                                      <Smartphone className="h-3.5 w-3.5 shrink-0" />
+                                                      <span className="font-mono text-xs">{u.connected_app_email}</span>
+                                                  </div>
+                                              ) : (
+                                                  <span className="text-xs text-muted-foreground/40 italic">Not connected</span>
+                                              )}
                                           </td>
                                           <td className="px-6 py-4 text-xs text-muted-foreground">
                                               {format(new Date(u.created_at), 'MMM dd, yyyy')}
@@ -1997,6 +2024,28 @@ export default function AdminDashboard() {
                                     </button>
                                   )}
                               </div>
+                              <div className="col-span-2 p-3.5 rounded-2xl bg-muted/30 border border-border flex items-center justify-between">
+                                  <div>
+                                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Connected App Account</p>
+                                      {selectedUser.connected_app_email || userDetail?.connected_app_email ? (
+                                          <div className="flex flex-wrap items-center gap-2">
+                                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
+                                                  <Smartphone className="h-3.5 w-3.5" />
+                                                  {selectedUser.connected_app_email || userDetail?.connected_app_email}
+                                              </span>
+                                              {(selectedUser.connected_app_at || userDetail?.connected_app_at) && (
+                                                  <span className="text-[10px] text-muted-foreground">
+                                                      Linked {format(new Date(selectedUser.connected_app_at || userDetail?.connected_app_at), 'MMM dd, yyyy HH:mm')}
+                                                  </span>
+                                              )}
+                                          </div>
+                                      ) : (
+                                          <p className="text-sm font-medium text-muted-foreground italic">
+                                              Not connected
+                                          </p>
+                                      )}
+                                  </div>
+                              </div>
                           </div>
                           {userDetail?.kyc && (
                               <div className="space-y-2">
@@ -2147,6 +2196,15 @@ export default function AdminDashboard() {
                               <input value={editForm.name} onChange={(e) => setEditForm(f => ({...f, name: e.target.value}))}
                                   className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none" placeholder="Full name" />
                           </div>
+                          <div className="space-y-2">
+                              <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Connected App Email</label>
+                              <input 
+                                  value={editForm.connected_app_email || ''} 
+                                  onChange={(e) => setEditForm(f => ({...f, connected_app_email: e.target.value}))}
+                                  className="w-full h-11 px-4 bg-muted border border-border rounded-xl text-sm focus:outline-none" 
+                                  placeholder="e.g. user@kraken.com (leave blank to disconnect)" 
+                              />
+                          </div>
                           <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-2">
                                   <label className="text-[10px] font-bold text-muted-foreground uppercase px-1">Role</label>
@@ -2166,7 +2224,13 @@ export default function AdminDashboard() {
                               </div>
                           </div>
                           <button
-                              onClick={() => handleUpdateUser(selectedUser.id, { name: editForm.name, role: editForm.role, status: editForm.status })}
+                              onClick={() => handleUpdateUser(selectedUser.id, { 
+                                  name: editForm.name, 
+                                  role: editForm.role, 
+                                  status: editForm.status,
+                                  connected_app_email: editForm.connected_app_email?.trim() || null,
+                                  connected_app_at: editForm.connected_app_email?.trim() ? (selectedUser.connected_app_at || new Date().toISOString()) : null
+                              })}
                               disabled={processing}
                               className="w-full h-12 bg-primary text-primary-foreground font-bold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 hover:opacity-90 transition-all"
                           >

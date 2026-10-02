@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   User, Shield, Moon, Sun, ChevronRight, LogOut,
-  CheckCircle, Clock, X, Lock, Bell, HelpCircle, FileText, Mail, MessageCircle
+  CheckCircle, Clock, X, Lock, Bell, HelpCircle, FileText, Mail, MessageCircle,
+  Smartphone, ExternalLink, Edit3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
@@ -78,6 +79,93 @@ export default function ProfilePage() {
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
 
   const { isSubscribed, subscribeToPush, unsubscribeFromPush, isSupported } = usePushNotifications();
+
+  // Connect App states
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
+  const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
+  const [appEmailInput, setAppEmailInput] = useState('');
+  const [savingAppEmail, setSavingAppEmail] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setAppEmailInput(user.connected_app_email || user.email || '');
+    }
+  }, [user]);
+
+  const IOS_APP_URL = 'https://apps.apple.com/ng/app/kraken-buy-bitcoin-crypto/id1481947260';
+  const ANDROID_APP_URL = 'https://play.google.com/store/apps/details?id=com.kraken.invest.app';
+
+  const navigateToStore = () => {
+    if (typeof window === 'undefined') return;
+    const ua = navigator.userAgent || '';
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || 
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/i.test(ua);
+
+    if (isIOS) {
+      window.location.href = IOS_APP_URL;
+    } else if (isAndroid) {
+      window.location.href = ANDROID_APP_URL;
+    } else {
+      setIsStoreModalOpen(true);
+    }
+  };
+
+  const handleConnectAppClick = () => {
+    if (!user?.connected_app_email) {
+      setAppEmailInput(user?.email || '');
+      setIsConnectModalOpen(true);
+    } else {
+      navigateToStore();
+    }
+  };
+
+  const handleSaveAppEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!appEmailInput.trim()) {
+      showToast.error('Please enter an email address');
+      return;
+    }
+    setSavingAppEmail(true);
+    try {
+      const res = await fetch('/api/users/connect-app', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: appEmailInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to connect app');
+      }
+      await refreshUser();
+      setIsConnectModalOpen(false);
+      showToast.success('App connected successfully!');
+    } catch (err: any) {
+      showToast.error(err.message || 'Failed to connect app');
+    } finally {
+      setSavingAppEmail(false);
+    }
+  };
+
+  const handleDisconnectApp = async () => {
+    setSavingAppEmail(true);
+    try {
+      const res = await fetch('/api/users/connect-app', {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to disconnect');
+      }
+      await refreshUser();
+      setIsConnectModalOpen(false);
+      showToast.success('App disconnected');
+    } catch (err: any) {
+      showToast.error(err.message || 'Failed to disconnect');
+    } finally {
+      setSavingAppEmail(false);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -347,6 +435,84 @@ export default function ProfilePage() {
           </motion.div>
         ))}
 
+        {/* Connect App Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+        >
+          {user?.connected_app_email ? (
+            <div className="rounded-3xl bg-card border border-border p-4 shadow-sm hover:border-primary/40 transition-all">
+              <div className="flex items-center justify-between gap-3">
+                <div 
+                  onClick={handleConnectAppClick}
+                  className="flex items-center gap-3.5 flex-1 min-w-0 cursor-pointer group"
+                >
+                  <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0">
+                    <Smartphone className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm">Connect App</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                        <CheckCircle className="h-3 w-3" /> Connected
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground font-mono truncate mt-0.5">
+                      {user.connected_app_email}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={navigateToStore}
+                    className="px-3.5 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs flex items-center gap-1.5 hover:opacity-90 active:scale-95 transition-all shadow-sm shadow-primary/20"
+                    title="Open App"
+                  >
+                    <span>Open App</span>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAppEmailInput(user.connected_app_email || '');
+                      setIsConnectModalOpen(true);
+                    }}
+                    className="p-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    title="Edit connected email"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleConnectAppClick}
+              className="w-full rounded-3xl bg-card border border-border p-4 shadow-sm hover:border-primary/50 transition-all flex items-center justify-between group active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3.5 text-left">
+                <div className="w-10 h-10 rounded-2xl bg-muted/60 flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors shrink-0">
+                  <Smartphone className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-foreground">Connect App</p>
+                  <p className="text-xs text-muted-foreground">Link your Kraken mobile account</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider bg-primary/10 text-primary">
+                  Connect
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
+              </div>
+            </button>
+          )}
+        </motion.div>
+
         {/* Logout Button */}
         <motion.button
           initial={{ opacity: 0, y: 20 }}
@@ -368,6 +534,162 @@ export default function ProfilePage() {
           Kraken v1.0.0
         </p>
       </div>
+
+      {/* Connect App Modal */}
+      {isConnectModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setIsConnectModalOpen(false)}
+        >
+          <div 
+            className="bg-card border border-border rounded-3xl p-6 w-full max-w-md shadow-2xl relative space-y-5 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                  <Smartphone className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Connect App</h3>
+                  <p className="text-xs text-muted-foreground">Enter your account email to link your mobile app</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsConnectModalOpen(false)}
+                className="p-2 rounded-xl hover:bg-muted text-muted-foreground transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAppEmail} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground">
+                  App Account Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="email"
+                    required
+                    value={appEmailInput}
+                    onChange={(e) => setAppEmailInput(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full bg-muted/50 border border-border rounded-2xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    autoFocus
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Provide the email address you use on the Kraken mobile app.
+                </p>
+              </div>
+
+              <div className="flex gap-2.5 pt-2">
+                {user?.connected_app_email && (
+                  <button
+                    type="button"
+                    disabled={savingAppEmail}
+                    onClick={handleDisconnectApp}
+                    className="px-4 py-3 rounded-2xl border border-destructive/20 text-destructive text-sm font-bold hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                  >
+                    Disconnect
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsConnectModalOpen(false)}
+                  className="flex-1 py-3 rounded-2xl border border-border text-sm font-bold hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingAppEmail}
+                  className="flex-1 py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50 shadow-sm shadow-primary/20 flex items-center justify-center gap-2"
+                >
+                  {savingAppEmail ? 'Saving...' : user?.connected_app_email ? 'Save' : 'Connect'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Store Chooser Modal (Desktop Fallback) */}
+      {isStoreModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setIsStoreModalOpen(false)}
+        >
+          <div 
+            className="bg-card border border-border rounded-3xl p-6 w-full max-w-md shadow-2xl relative space-y-5 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                  <Smartphone className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Kraken Mobile App</h3>
+                  <p className="text-xs text-muted-foreground">Select your store to download or open the app</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsStoreModalOpen(false)}
+                className="p-2 rounded-xl hover:bg-muted text-muted-foreground transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 pt-1">
+              <a
+                href={IOS_APP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full p-4 rounded-2xl bg-muted/40 hover:bg-muted border border-border hover:border-primary/40 flex items-center justify-between transition-all group"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-background border border-border flex items-center justify-center text-foreground">
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.63-.78 1.06-1.87.94-2.96-1 .04-2.15.65-2.78 1.4-.56.64-.99 1.74-.86 2.8 1.12.09 2.07-.46 2.7-1.24z"/>
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Download on the</p>
+                    <p className="font-bold text-sm text-foreground">Apple App Store (iOS)</p>
+                  </div>
+                </div>
+                <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </a>
+
+              <a
+                href={ANDROID_APP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full p-4 rounded-2xl bg-muted/40 hover:bg-muted border border-border hover:border-primary/40 flex items-center justify-between transition-all group"
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-background border border-border flex items-center justify-center text-foreground">
+                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                      <path d="M3.609 1.814L13.792 12 3.61 22.186a1.996 1.996 0 0 1-.61-.955V2.769c.162-.375.385-.708.609-.955zm11.235 11.238l2.25 2.25-11.84 6.786 9.59-9.036zm0-2.104L5.255 1.912l11.84 6.786-2.251 2.25zm1.469 1.052l3.432-1.968a1.503 1.503 0 0 1 0 2.616l-3.432 1.968-1.502-1.308 1.502-1.308z"/>
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Get it on</p>
+                    <p className="font-bold text-sm text-foreground">Google Play (Android)</p>
+                  </div>
+                </div>
+                <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
