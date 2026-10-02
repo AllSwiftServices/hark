@@ -446,34 +446,25 @@ export default function ProfilePage() {
               <div className="flex items-center justify-between gap-3">
                 <div 
                   onClick={handleConnectAppClick}
-                  className="flex items-center gap-3.5 flex-1 min-w-0 cursor-pointer group"
+                  className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer group"
                 >
                   <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-105 transition-transform shrink-0">
                     <Smartphone className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm">Connect App</span>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-sm whitespace-nowrap">Connect App</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
                         <CheckCircle className="h-3 w-3" /> Connected
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground font-mono truncate mt-0.5">
+                    <p className="text-xs text-muted-foreground font-mono truncate mt-0.5" title={user.connected_app_email}>
                       {user.connected_app_email}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={navigateToStore}
-                    className="px-3.5 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs flex items-center gap-1.5 hover:opacity-90 active:scale-95 transition-all shadow-sm shadow-primary/20"
-                    title="Open App"
-                  >
-                    <span>Open App</span>
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </button>
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
                     onClick={() => {
@@ -482,10 +473,32 @@ export default function ProfilePage() {
                     }}
                     className="p-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                     title="Edit connected email"
+                    aria-label="Edit connected email"
                   >
                     <Edit3 className="h-4 w-4" />
                   </button>
+                  <button
+                    type="button"
+                    onClick={navigateToStore}
+                    className="hidden sm:inline-flex px-3.5 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs items-center gap-1.5 hover:opacity-90 active:scale-95 transition-all shadow-sm shadow-primary/20"
+                    title="Open App"
+                  >
+                    <span>Open App</span>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </button>
                 </div>
+              </div>
+
+              {/* Mobile-only full-width Open button */}
+              <div className="mt-3 pt-3 border-t border-border/50 sm:hidden">
+                <button
+                  type="button"
+                  onClick={navigateToStore}
+                  className="w-full py-2.5 px-4 rounded-2xl bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-sm shadow-primary/20"
+                >
+                  <span>Open App</span>
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </button>
               </div>
             </div>
           ) : (
@@ -542,7 +555,7 @@ export default function ProfilePage() {
           onClick={() => setIsConnectModalOpen(false)}
         >
           <div 
-            className="bg-card border border-border rounded-3xl p-6 w-full max-w-md shadow-2xl relative space-y-5 animate-in zoom-in-95 duration-200"
+            className="bg-card border border-border rounded-3xl p-5 sm:p-6 w-full max-w-md shadow-2xl relative space-y-5 animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -624,7 +637,7 @@ export default function ProfilePage() {
           onClick={() => setIsStoreModalOpen(false)}
         >
           <div 
-            className="bg-card border border-border rounded-3xl p-6 w-full max-w-md shadow-2xl relative space-y-5 animate-in zoom-in-95 duration-200"
+            className="bg-card border border-border rounded-3xl p-5 sm:p-6 w-full max-w-md shadow-2xl relative space-y-5 animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
